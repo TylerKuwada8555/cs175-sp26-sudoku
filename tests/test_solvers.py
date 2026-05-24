@@ -8,7 +8,7 @@ running on a known puzzle.
 import pytest
 from sudoku import (
     parse_string, to_string, is_solved, matches_clues,
-    PlainBacktrackingSolver, CSPSolver,
+    PlainBacktrackingSolver, CSPSolver, XSolver
 )
 
 
@@ -62,7 +62,6 @@ def test_plain_backtracking_solves_easy():
     print(f"plain bt: {stats['time_seconds']:.4f}s, "
           f"{stats['nodes_expanded']} nodes, {stats['backtracks']} backtracks")
 
-
 def test_csp_solves_easy():
     solver = CSPSolver()
     grid = parse_string(EASY_PUZZLE)
@@ -73,13 +72,25 @@ def test_csp_solves_easy():
     assert stats["solved"] is True
     print(f"csp: {stats['time_seconds']:.4f}s, "
           f"{stats['nodes_expanded']} nodes, {stats['backtracks']} backtracks")
+    
+def test_x_solves_easy():
+    solver = XSolver()
+    grid = parse_string(EASY_PUZZLE)
+    solved, stats = solver.solve(grid)
+    assert solved is not None
+    assert is_solved(solved)
+    assert matches_clues(grid, solved)
+    assert stats["solved"] is True
+    print(f"x: {stats['time_seconds']:.4f}s, "
+          f"{stats['nodes_expanded']} nodes, {stats['backtracks']} backtracks")
 
-
-def test_both_solvers_agree():
-    """Both solvers should produce the same correct solution."""
+def test_solvers_agree():
+    """Solvers should produce the same correct solution."""
     s1 = PlainBacktrackingSolver()
     s2 = CSPSolver()
+    s3 = XSolver()
     grid = parse_string(EASY_PUZZLE)
     sol1, _ = s1.solve(grid)
     sol2, _ = s2.solve(grid)
-    assert to_string(sol1) == to_string(sol2)
+    sol3, _ = s3.solve(grid)
+    assert to_string(sol1) == to_string(sol2) and to_string(sol2) == to_string(sol3)

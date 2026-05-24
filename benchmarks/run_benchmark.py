@@ -12,12 +12,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sudoku import (
     parse_string, to_string, is_solved,
-    PlainBacktrackingSolver, CSPSolver,
+    PlainBacktrackingSolver, CSPSolver, XSolver
 )
 from puzzles.bank import all_puzzles
 
 
-SOLVERS = [PlainBacktrackingSolver, CSPSolver]
+SOLVERS = [PlainBacktrackingSolver, CSPSolver, XSolver]
 TIMEOUT_SECONDS = 30  # skip plain bt on very hard puzzles to avoid hanging
 
 
