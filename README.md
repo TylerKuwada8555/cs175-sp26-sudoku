@@ -10,8 +10,6 @@ CS 175, Spring 2026, Prof. Kask.
 - **Solver 1: Plain Backtracking** (baseline) — `sudoku/solver_backtracking.py` (done)
 - **Solver 2: Backtracking + AC-3 + MRV/LCV** — `sudoku/solver_csp.py` (done)
 - **Solver 3: Dancing Links / Algorithm X** — `sudoku/solver_x.py` (done)
-- **Stretch: Preemptive sets (Crook)** — TODO
-- **Stretch: Simulated annealing (Chi & Lange)** — TODO
 
 ## How to run
 
@@ -19,7 +17,7 @@ CS 175, Spring 2026, Prof. Kask.
 
 ```bash
 pip install -r requirements.txt
-pytest tests/ -v          # run tests
+python -m pytest tests/ -v          # run tests
 python benchmarks/run_benchmark.py   # run benchmarks
 ```
 
@@ -44,6 +42,12 @@ sudoku/             Solver code
   solver_x.py              Solver 3
 puzzles/
   bank.py           Puzzles by difficulty tier (easy/medium/hard/expert/17-clue)
+  puzzle_bank/
+    easy.txt
+    medium.txt
+    hard.txt
+    expert.txt
+    17.txt
 tests/
   test_solvers.py   Pytest unit tests
 benchmarks/

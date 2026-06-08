@@ -39,7 +39,7 @@ def run_one(solver_cls, puzzle_str, skip_if_hard=False, difficulty=""):
             "skipped": True,
         }
 
-    solved, stats = solver.solve(grid)
+    solved, stats = solver.solve(grid, TIMEOUT_SECONDS)
     if solved is not None:
         assert is_solved(solved), f"{solver_cls.name} returned an invalid solution!"
     stats["skipped"] = False

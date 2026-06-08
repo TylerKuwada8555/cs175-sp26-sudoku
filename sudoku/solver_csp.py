@@ -16,8 +16,6 @@ from collections import deque
 
 
 def get_peers(r, c):
-    """Return the set of (r,c) cells that share a row, column, or box
-    with (r,c), excluding (r,c) itself."""
     peers = set()
     for cc in range(9):
         if cc != c:
@@ -34,8 +32,11 @@ def get_peers(r, c):
     return peers
 
 
-# Precompute peers once, since they never change
 PEERS = {(r, c): get_peers(r, c) for r in range(9) for c in range(9)}
+
+
+class SolverTimeout(Exception):
+    pass
 
 
 class CSPSolver:
@@ -44,9 +45,9 @@ class CSPSolver:
     def __init__(self):
         self.nodes_expanded = 0
         self.backtracks = 0
+        self.deadline = None
 
-    def solve(self, grid):
-        # build initial domains: singleton for clues, {1..9} otherwise
+    def solve(self, grid, timeout_seconds=None):
         domains = {}
         for r in range(9):
             for c in range(9):
@@ -58,23 +59,38 @@ class CSPSolver:
         self.nodes_expanded = 0
         self.backtracks = 0
         start = time.perf_counter()
+        self.deadline = (
+            start + timeout_seconds
+            if timeout_seconds is not None
+            else None
+        )
 
-        # run AC-3 once at the start to prune obvious values
-        if not self._ac3(domains):
+        try:
+            if not self._ac3(domains):
+                elapsed = time.perf_counter() - start
+                return None, self._stats(False, elapsed)
+
+            result = self._backtrack(domains)
             elapsed = time.perf_counter() - start
-            return None, self._stats(False, elapsed)
 
-        result = self._backtrack(domains)
-        elapsed = time.perf_counter() - start
+            if result is None:
+                return None, self._stats(False, elapsed)
 
-        if result is None:
-            return None, self._stats(False, elapsed)
+            solved = [[0] * 9 for _ in range(9)]
+            for (r, c), vals in result.items():
+                solved[r][c] = next(iter(vals))
 
-        # extract solution into a 9x9 grid
-        solved = [[0]*9 for _ in range(9)]
-        for (r, c), vals in result.items():
-            solved[r][c] = next(iter(vals))
-        return solved, self._stats(True, elapsed)
+            return solved, self._stats(True, elapsed)
+
+        except SolverTimeout:
+            elapsed = time.perf_counter() - start
+            stats = self._stats(False, elapsed)
+            stats["skipped"] = True
+            return None, stats
+
+    def _check_timeout(self):
+        if self.deadline is not None and time.perf_counter() > self.deadline:
+            raise SolverTimeout()
 
     def _stats(self, solved, elapsed):
         return {
@@ -86,13 +102,14 @@ class CSPSolver:
         }
 
     def _ac3(self, domains):
-        """Standard AC-3. Returns False if a domain wipes out."""
         queue = deque()
         for cell in domains:
             for peer in PEERS[cell]:
                 queue.append((cell, peer))
 
         while queue:
+            self._check_timeout()
+
             xi, xj = queue.popleft()
             if self._revise(domains, xi, xj):
                 if not domains[xi]:
@@ -103,9 +120,7 @@ class CSPSolver:
         return True
 
     def _revise(self, domains, xi, xj):
-        """Remove values from D[xi] that have no consistent partner in D[xj]."""
         revised = False
-        # For AllDifferent: if xj has a singleton value v, then xi can't be v.
         if len(domains[xj]) == 1:
             v = next(iter(domains[xj]))
             if v in domains[xi]:
@@ -114,45 +129,44 @@ class CSPSolver:
         return revised
 
     def _select_unassigned(self, domains):
-        """MRV: pick the unassigned cell with the smallest domain.
-        Tie-break by degree (number of unassigned peers)."""
         unassigned = [(cell, d) for cell, d in domains.items() if len(d) > 1]
         if not unassigned:
             return None
-        # min by (domain size, -degree)
+
         def key(item):
             cell, d = item
             degree = sum(1 for p in PEERS[cell] if len(domains[p]) > 1)
             return (len(d), -degree)
+
         return min(unassigned, key=key)[0]
 
     def _order_values(self, cell, domains):
-        """LCV: try values that rule out the fewest options for peers first."""
         def count_conflicts(v):
             return sum(1 for p in PEERS[cell] if v in domains[p])
+
         return sorted(domains[cell], key=count_conflicts)
 
     def _backtrack(self, domains):
+        self._check_timeout()
+
         self.nodes_expanded += 1
 
         cell = self._select_unassigned(domains)
         if cell is None:
-            return domains  # all singletons, done
+            return domains
 
         for v in self._order_values(cell, domains):
-            # save current state for restoration
+            self._check_timeout()
+
             saved = {c: set(d) for c, d in domains.items()}
 
-            # assign v
             domains[cell] = {v}
 
-            # propagate
             if self._ac3(domains):
                 result = self._backtrack(domains)
                 if result is not None:
                     return result
 
-            # restore on failure
             domains.clear()
             domains.update(saved)
             self.backtracks += 1

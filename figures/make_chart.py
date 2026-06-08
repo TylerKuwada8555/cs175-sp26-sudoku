@@ -13,19 +13,29 @@ import os
 # Data from running benchmarks/run_benchmark.py
 # format: (difficulty, plain_time, csp_time, plain_nodes, csp_nodes)
 # None means "timed out / skipped"
+# data = [
+#     ("easy",     0.0064,    0.0024,    1526,      1),
+#     ("medium",   31.7272,   0.0014,    6546495,   0.5),   # 0.5 to be visible on log scale
+#     ("hard",     0.9045,    0.0403,    188453,    40),
+#     ("expert",   None,      1.1222,    None,      1090),
+#     ("17-clue",  None,      1.2725,    None,      1315),
+# ]
+
 data = [
-    ("easy",     0.0064,    0.0024,    1526,      1),
-    ("medium",   31.7272,   0.0014,    6546495,   0.5),   # 0.5 to be visible on log scale
-    ("hard",     0.9045,    0.0403,    188453,    40),
-    ("expert",   None,      1.1222,    None,      1090),
-    ("17-clue",  None,      1.2725,    None,      1315),
+    ("easy", 0.0155, 0.0035, 0.0039, 1526, 1, 113),
+    ("medium", 0.0147, 0.0059, 0.0071, 1440, 1, 128),
+    ("hard", 1.871, 0.0627, 0.025, 188453, 40, 637),
+    ("expert", None, 1.6745, 0.0349, None, 1090, 671),
+    ("17-clue", None, 1.8724, 0.004, None, 1315, 124)
 ]
 
 difficulties = [d[0] for d in data]
 plain_times = [d[1] if d[1] is not None else 30.0 for d in data]   # 30 = timeout threshold
 csp_times = [d[2] for d in data]
-plain_nodes = [d[3] if d[3] is not None else 1e7 for d in data]
-csp_nodes = [d[4] for d in data]
+x_times = [d[3] for d in data]
+plain_nodes = [d[4] if d[4] is not None else 1e7 for d in data]
+csp_nodes = [d[5] for d in data]
+x_nodes = [d[6] for d in data]
 
 # track which bars are timeouts (so we can hatch them)
 plain_timeout = [d[1] is None for d in data]
@@ -36,10 +46,13 @@ width = 0.38
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
 
 # --- Left subplot: solve time ---
-bars1a = ax1.bar(x - width/2, plain_times, width,
+bars1a = ax1.bar(x - width/3, plain_times, width / 3,
                  label="Plain backtracking", color="#d62728")
-bars1b = ax1.bar(x + width/2, csp_times, width,
+bars1b = ax1.bar(x, csp_times, width / 3,
                  label="Backtracking + AC-3 + MRV/LCV", color="#2ca02c")
+bars1c = ax1.bar(x + width/3, x_times, width / 3,
+                 label="Algorithm X", color="#2c94a0")
+
 
 # hatch timeouts
 for bar, is_to in zip(bars1a, plain_timeout):
@@ -60,14 +73,16 @@ ax1.text(0.02, 30 * 1.2, "30s timeout", color="gray", fontsize=9)
 # label timeout bars
 for i, is_to in enumerate(plain_timeout):
     if is_to:
-        ax1.text(i - width/2, 30 * 1.05, "timeout", ha="center",
+        ax1.text(i - width/3, 30 * 1.05, "timeout", ha="center",
                  fontsize=8, color="#d62728", fontweight="bold")
 
 # --- Right subplot: nodes expanded ---
-bars2a = ax2.bar(x - width/2, plain_nodes, width,
+bars2a = ax2.bar(x - width/3, plain_nodes, width / 3,
                  label="Plain backtracking", color="#d62728")
-bars2b = ax2.bar(x + width/2, csp_nodes, width,
+bars2b = ax2.bar(x, csp_nodes, width / 3,
                  label="Backtracking + AC-3 + MRV/LCV", color="#2ca02c")
+bars2c = ax2.bar(x + width/3, x_nodes, width / 3,
+                 label="Algorithm X", color="#2c94a0")
 
 for bar, is_to in zip(bars2a, plain_timeout):
     if is_to:
@@ -88,7 +103,7 @@ for i, is_to in enumerate(plain_timeout):
                  fontsize=8, color="#d62728", fontweight="bold")
 
 fig.suptitle(
-    "Plain backtracking vs. CSP (AC-3 + MRV + LCV) on the puzzle bank",
+    "Plain backtracking vs. CSP (AC-3 + MRV + LCV) vs Algorithm X on the puzzle bank",
     fontsize=13, fontweight="bold"
 )
 fig.tight_layout(rect=[0, 0, 1, 0.96])
